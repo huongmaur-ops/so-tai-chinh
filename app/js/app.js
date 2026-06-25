@@ -22,6 +22,10 @@ const INCOME_CATS = [
   {name:'Khác',icon:'💰'}
 ];
 const KIND_LABEL = {'cp-bien-doi':'CP biến đổi','cp-co-dinh':'CP cố định','tai-san':'Tài sản','tieu-san':'Tiêu sản/Nợ'};
+// Loại ví: icon mặc định + nhãn. Thẻ tín dụng (credit) = số dư âm nghĩa là đang nợ.
+const WALLET_TYPE_ICON = {cash:'💵',bank:'🏦',ewallet:'📱',saving:'🪙',credit:'💳',other:'👛'};
+const WALLET_TYPE_LABEL = {cash:'Tiền mặt',bank:'Ngân hàng',ewallet:'Ví điện tử',saving:'Tiết kiệm',credit:'Thẻ tín dụng',other:'Khác'};
+const ICON_TO_TYPE = {'💵':'cash','🏦':'bank','📱':'ewallet','🪙':'saving','💳':'credit','👛':'other'};
 const REFLECT_Q = [
   'Khoản chi khiến bạn HỐI TIẾC nhất? Tại sao? Lần sau bạn sẽ xử lý thế nào?',
   'Khoản chi/đầu tư bạn thấy XỨNG ĐÁNG nhất? Tại sao?',
@@ -62,7 +66,13 @@ function load(){
   try{ d = JSON.parse(localStorage.getItem(STORE_KEY)); }catch(e){ d=null; }
   d = Object.assign(blank(), d||{});
   // --- migration: đảm bảo có ít nhất 1 ví, gán ví cho giao dịch cũ ---
-  if(!d.wallets.length){ d.wallets=[{id:'w_cash',name:'Tiền mặt',icon:'💵',initial:0}]; }
+  if(!d.wallets.length){ d.wallets=[{id:'w_cash',name:'Tiền mặt',icon:'💵',type:'cash',initial:0}]; }
+  // --- migration: gán loại ví (type) cho ví cũ dựa trên icon ---
+  d.wallets.forEach(w=>{
+    if(!w.type) w.type = ICON_TO_TYPE[w.icon] || 'other';
+    if(!w.icon) w.icon = WALLET_TYPE_ICON[w.type] || '👛';
+    if(typeof w.bank !== 'string') w.bank = '';
+  });
   const defaultW = d.wallets[0].id;
   d.transactions.forEach(t=>{ if(!t.walletId) t.walletId=defaultW; });
   // --- migration: khởi tạo 6 lọ JARS mặc định nếu chưa có ---
@@ -166,7 +176,10 @@ function fillCatSelects(){
   });
 }
 function fillWalletSelects(){
-  const opts=state.wallets.map(w=>`<option value="${w.id}">${w.icon} ${esc(w.name)}</option>`).join('');
+  const opts=state.wallets.map(w=>{
+    const label=(w.bank&&w.bank.trim())?`${w.bank.trim()} · ${w.name}`:w.name;
+    return `<option value="${w.id}">${w.icon} ${esc(label)}</option>`;
+  }).join('');
   document.querySelectorAll('.wallet-select').forEach(sel=>{ const cur=sel.value; sel.innerHTML=opts; if(cur&&state.wallets.find(w=>w.id===cur))sel.value=cur; });
   const wf=document.getElementById('txFilterWallet');
   if(wf){ const cur=wf.value; wf.innerHTML='<option value="">Tất cả ví</option>'+opts; wf.value=cur; }
@@ -344,11 +357,26 @@ function renderTxns(){
 /* ===========================================================
    WALLETS
    =========================================================== */
+// Hiện/ẩn ô hạn mức & ngày sao kê khi chọn loại "Thẻ tín dụng".
+document.querySelector('#walletForm [name=type]').addEventListener('change',e=>{
+  document.querySelector('#walletForm .credit-only').hidden = e.target.value!=='credit';
+});
 document.getElementById('walletForm').addEventListener('submit',e=>{
   e.preventDefault(); const f=e.target;
   if(!f.name.value.trim()){ toast('Nhập tên ví',true); return; }
-  state.wallets.push({id:uid(),name:f.name.value.trim(),icon:f.icon.value,initial:parseMoney(f.initial.value)});
-  save(); f.reset(); fillWalletSelects(); renderWallets(); toast('Đã thêm ví');
+  const type=f.type.value;
+  let initial=parseMoney(f.initial.value);
+  // Thẻ tín dụng: dư nợ nhập dương được lưu thành số âm (đang nợ).
+  if(type==='credit' && initial>0) initial=-initial;
+  const w={id:uid(),type,icon:WALLET_TYPE_ICON[type]||'👛',name:f.name.value.trim(),bank:f.bank.value.trim(),initial};
+  if(type==='credit'){
+    w.limit=parseMoney(f.limit.value);
+    const sd=parseInt(f.stmtDay.value,10);
+    if(sd>=1&&sd<=31) w.stmtDay=sd;
+  }
+  state.wallets.push(w);
+  save(); f.reset(); document.querySelector('#walletForm .credit-only').hidden=true;
+  fillWalletSelects(); renderWallets(); toast('Đã thêm ví');
 });
 function delWallet(id){
   if(state.wallets.length<=1){ toast('Phải còn ít nhất 1 ví',true); return; }
@@ -357,17 +385,57 @@ function delWallet(id){
   state.wallets=state.wallets.filter(w=>w.id!==id);
   save(); fillWalletSelects(); renderWallets(); toast('Đã xóa ví');
 }
+// Số ngày tới kỳ sao kê tiếp theo (1..31). Trả null nếu không có.
+function daysToStatement(stmtDay){
+  if(!stmtDay) return null;
+  const now=new Date(), y=now.getFullYear(), m=now.getMonth(), today=now.getDate();
+  // Ngày sao kê tháng này (giới hạn theo số ngày thực của tháng).
+  const dim=new Date(y,m+1,0).getDate();
+  let day=Math.min(stmtDay,dim);
+  let target=new Date(y,m,day);
+  if(day<today){ const dim2=new Date(y,m+2,0).getDate(); target=new Date(y,m+1,Math.min(stmtDay,dim2)); }
+  return Math.round((target-new Date(y,m,today))/86400000);
+}
+function walletCardHtml(w){
+  const bal=walletBalance(w.id);
+  if(w.type==='credit'){
+    const debt = bal<0 ? -bal : 0;
+    const limit = w.limit||0;
+    const avail = limit ? Math.max(0, limit-debt) : null;
+    const pct = limit ? Math.min(100, Math.round(debt/limit*100)) : 0;
+    const dts = daysToStatement(w.stmtDay);
+    const stmtTxt = w.stmtDay
+      ? `Sao kê ngày ${w.stmtDay} hằng tháng${dts!=null?` · còn ${dts} ngày`:''}`
+      : '';
+    return `<div class="wallet-card is-credit">
+      <button class="del-btn wc-del" data-delw="${w.id}">✕</button>
+      <div class="wc-top"><div class="wc-ic">${w.icon}</div>
+        <div><div class="wc-name">${esc(w.name)}</div><div class="wc-type">Thẻ tín dụng</div></div></div>
+      <div class="wc-bal${debt>0?' neg':''}">${debt>0?'− '+fmt(debt):fmt(0)}</div>
+      <div class="wc-init">Dư nợ hiện tại${bal>0?` · dư có ${fmt(bal)}`:''}</div>
+      ${limit?`<div class="cc-bar"><span style="width:${pct}%"></span></div>
+        <div class="cc-meta">Hạn mức ${fmt(limit)} · Còn dùng <b>${fmt(avail)}</b></div>`:''}
+      ${stmtTxt?`<div class="cc-stmt${dts!=null&&dts<=3?' soon':''}">🗓️ ${stmtTxt}</div>`:''}
+    </div>`;
+  }
+  return `<div class="wallet-card">
+    <button class="del-btn wc-del" data-delw="${w.id}">✕</button>
+    <div class="wc-top"><div class="wc-ic">${w.icon}</div>
+      <div><div class="wc-name">${esc(w.name)}</div><div class="wc-type">${WALLET_TYPE_LABEL[w.type]||'Khác'}</div></div></div>
+    <div class="wc-bal${bal<0?' neg':''}">${fmt(bal)}</div>
+    <div class="wc-init">Số dư ban đầu: ${fmt(w.initial||0)}</div>
+  </div>`;
+}
 function renderWallets(){
   document.getElementById('walletGrandTotal').textContent=fmt(totalWallets());
   const grid=document.getElementById('walletGrid');
-  grid.innerHTML=state.wallets.map(w=>{
-    const bal=walletBalance(w.id);
-    return `<div class="wallet-card">
-      <button class="del-btn wc-del" data-delw="${w.id}">✕</button>
-      <div class="wc-top"><div class="wc-ic">${w.icon}</div><div class="wc-name">${esc(w.name)}</div></div>
-      <div class="wc-bal${bal<0?' neg':''}">${fmt(bal)}</div>
-      <div class="wc-init">Số dư ban đầu: ${fmt(w.initial||0)}</div>
-    </div>`;
+  // Gom ví theo "bank"; ví không đặt nhóm xếp cuối.
+  const groups={};
+  state.wallets.forEach(w=>{ const g=(w.bank&&w.bank.trim())?w.bank.trim():'__none'; (groups[g]=groups[g]||[]).push(w); });
+  const order=Object.keys(groups).sort((a,b)=> a==='__none'?1 : b==='__none'?-1 : a.localeCompare(b,'vi'));
+  grid.innerHTML=order.map(g=>{
+    const head = g==='__none' ? '' : `<div class="wallet-group-head">🏦 ${esc(g)}</div>`;
+    return head + `<div class="wallet-grid-inner">${groups[g].map(walletCardHtml).join('')}</div>`;
   }).join('');
   grid.querySelectorAll('[data-delw]').forEach(b=>b.addEventListener('click',()=>delWallet(b.dataset.delw)));
 }
@@ -483,9 +551,19 @@ function delBS(key,id){
 }
 document.getElementById('syncWalletsBtn').addEventListener('click',()=>{
   const b=ensureBalance(curMonth);
+  // Xóa mục cũ do đồng bộ tạo ra, rồi tạo lại từ số dư ví hiện tại.
   b.assets=b.assets.filter(x=>!x.fromWallet);
-  state.wallets.forEach(w=>{ const bal=walletBalance(w.id); if(bal>0) b.assets.push({id:uid(),name:`${w.icon} ${w.name} (số dư ví)`,value:bal,fromWallet:true}); });
-  save(); renderBalance(); toast('Đã cập nhật số dư ví vào tài sản');
+  b.liabilities=b.liabilities.filter(x=>!x.fromWallet);
+  state.wallets.forEach(w=>{
+    const bal=walletBalance(w.id);
+    if(bal>0){
+      b.assets.push({id:uid(),name:`${w.icon} ${w.name} (số dư ví)`,value:bal,fromWallet:true});
+    }else if(bal<0){
+      const label = w.type==='credit' ? 'dư nợ thẻ' : 'số dư âm';
+      b.liabilities.push({id:uid(),name:`${w.icon} ${w.name} (${label})`,value:-bal,fromWallet:true});
+    }
+  });
+  save(); renderBalance(); toast('Đã đồng bộ số dư ví vào tài sản & nợ');
 });
 function renderBalance(){
   const b=ensureBalance(curMonth), nw=netWorthOf(curMonth);
