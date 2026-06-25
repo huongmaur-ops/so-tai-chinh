@@ -1,0 +1,20 @@
+{
+  "name": "TH · Sổ Tài Chính",
+  "short_name": "Sổ TH",
+  "description": "Sổ quản lý tài chính cá nhân — 6 lọ JARS, ghi chép thu chi, chạy offline.",
+  "lang": "vi",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f1419",
+  "theme_color": "#0f1419",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
