@@ -3,7 +3,7 @@
    Cache app shell để chạy offline & cài như app (PWA).
    Đổi CACHE_VERSION mỗi khi sửa code để buộc cập nhật.
    =========================================================== */
-const CACHE_VERSION = 'th-sotaichinh-v1';
+const CACHE_VERSION = 'th-sotaichinh-v2';
 
 // Tài nguyên cùng nguồn — nạp sẵn khi cài đặt.
 const CORE_ASSETS = [
