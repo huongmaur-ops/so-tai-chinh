@@ -200,16 +200,29 @@ tbody tr:hover{background:var(--panel2)}
 .networth-banner small{color:var(--muted)}
 
 /* wallets */
-.wallet-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.wallet-grid{display:flex;flex-direction:column;gap:18px;margin-bottom:18px}
+.wallet-grid-inner{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.wallet-group-head{font-size:13px;font-weight:700;color:var(--gold-soft);letter-spacing:.4px;margin:2px 0 -6px}
 .wallet-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;position:relative}
+.wallet-card.is-credit{border-color:var(--gold);background:linear-gradient(135deg,rgba(201,162,39,.08),var(--panel))}
 .wallet-card .wc-top{display:flex;align-items:center;gap:11px;margin-bottom:12px}
-.wallet-card .wc-ic{width:42px;height:42px;border-radius:11px;background:var(--panel2);display:grid;place-items:center;font-size:20px}
+.wallet-card .wc-ic{width:42px;height:42px;border-radius:11px;background:var(--panel2);display:grid;place-items:center;font-size:20px;flex-shrink:0}
 .wallet-card .wc-name{font-weight:600}
+.wallet-card .wc-type{font-size:11px;color:var(--muted);margin-top:1px}
 .wallet-card .wc-bal{font-size:24px;font-weight:800}
 .wallet-card .wc-bal.neg{color:var(--red)}
 .wallet-card .wc-init{font-size:12px;color:var(--muted);margin-top:4px}
 .wallet-card .wc-del{position:absolute;top:14px;right:14px}
-.icon-select{max-width:160px}
+.cc-bar{height:7px;border-radius:99px;background:var(--panel2);overflow:hidden;margin:10px 0 6px}
+.cc-bar span{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--gold))}
+.cc-meta{font-size:12px;color:var(--muted)}
+.cc-meta b{color:var(--txt)}
+.cc-stmt{font-size:12px;color:var(--gold-soft);margin-top:7px}
+.cc-stmt.soon{color:var(--red);font-weight:600}
+.credit-only{display:flex;gap:10px;flex:1 1 100%}
+.credit-only[hidden]{display:none}
+.credit-only input{flex:1;min-width:0}
+.type-select{max-width:200px}
 
 /* budget */
 .budget-list{display:flex;flex-direction:column;gap:16px}
@@ -283,14 +296,14 @@ tbody tr:hover{background:var(--panel2)}
 @media(max-width:920px){
   .kpi-grid{grid-template-columns:1fr 1fr}
   .card-row,.concept-grid{grid-template-columns:1fr}
-  .wallet-grid{grid-template-columns:1fr 1fr}
+  .wallet-grid-inner{grid-template-columns:1fr 1fr}
 }
 @media(max-width:760px){
   .sidebar{position:fixed;left:0;top:0;z-index:40;transform:translateX(-100%);transition:.25s}
   .sidebar.open{transform:none}
   .menu-toggle{display:block}
   .main{padding:64px 18px 50px}
-  .day-summary,.kpi-grid,.wallet-grid{grid-template-columns:1fr}
+  .day-summary,.kpi-grid,.wallet-grid-inner{grid-template-columns:1fr}
   .cal-cell{min-height:58px}
   .jar-edit{flex-wrap:wrap}
   .jar-amt{width:100%;text-align:right}
