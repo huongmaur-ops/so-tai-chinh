@@ -263,7 +263,7 @@
 
     <!-- ============ WALLETS ============ -->
     <section class="view" id="view-wallets">
-      <header class="page-head"><div><h1>Ví / Tài khoản</h1><p class="muted">Số dư = số dư ban đầu + thu − chi ± chuyển khoản.</p></div></header>
+      <header class="page-head"><div><h1>Ví / Tài khoản</h1><p class="muted">Mỗi tài khoản / thẻ = 1 ví. Thẻ tín dụng: số dư âm = đang nợ. Đặt cùng "Ngân hàng" để gom nhóm.</p></div></header>
       <div class="networth-banner wallet-banner">
         <span>TỔNG SỐ DƯ TẤT CẢ VÍ</span>
         <strong id="walletGrandTotal">0 đ</strong>
@@ -272,13 +272,21 @@
       <div class="card">
         <h3>➕ Thêm ví mới</h3>
         <form id="walletForm" class="inline-form wallet-add">
-          <select name="icon" class="icon-select">
-            <option value="💵">💵 Tiền mặt</option><option value="🏦">🏦 Ngân hàng</option>
-            <option value="📱">📱 Ví điện tử</option><option value="💳">💳 Thẻ tín dụng</option>
-            <option value="🪙">🪙 Tiết kiệm</option><option value="👛">👛 Khác</option>
+          <select name="type" class="type-select">
+            <option value="cash">💵 Tiền mặt</option>
+            <option value="bank">🏦 Tài khoản ngân hàng</option>
+            <option value="ewallet">📱 Ví điện tử</option>
+            <option value="saving">🪙 Tiết kiệm</option>
+            <option value="credit">💳 Thẻ tín dụng</option>
+            <option value="other">👛 Khác</option>
           </select>
-          <input type="text" name="name" placeholder="Tên ví (VD: Vietcombank)" required />
-          <input type="text" name="initial" inputmode="numeric" placeholder="Số dư ban đầu" />
+          <input type="text" name="bank" placeholder="Ngân hàng / nhóm (VD: Vietcombank)" />
+          <input type="text" name="name" placeholder="Tên ví (VD: TK thanh toán, Visa)" required />
+          <input type="text" name="initial" inputmode="numeric" placeholder="Số dư ban đầu (thẻ TD: nhập dư nợ)" />
+          <div class="credit-only" hidden>
+            <input type="text" name="limit" inputmode="numeric" placeholder="Hạn mức thẻ (VD: 50tr)" />
+            <input type="number" name="stmtDay" min="1" max="31" placeholder="Ngày sao kê (1–31)" />
+          </div>
           <button class="btn btn-sm btn-primary">Thêm ví</button>
         </form>
       </div>
@@ -461,6 +469,16 @@
           <div class="formula"><b>Tiền tiết kiệm</b> = Tổng thu − Tổng chi<br><small>Mục tiêu: ít nhất 20% thu nhập/tháng</small></div>
           <div class="formula"><b>Tỷ lệ tiết kiệm</b> = Tiết kiệm ÷ Thu nhập × 100%<br><small>Lý tưởng &gt;20% · Khá 10–20% · Cần cố gắng &lt;10%</small></div>
         </div>
+      </div>
+      <div class="card">
+        <h3>🏦 Nhiều tài khoản / thẻ & lãi suất</h3>
+        <ol class="steps">
+          <li><strong>Mỗi tài khoản / thẻ = 1 ví.</strong> Đặt cùng tên ở ô "Ngân hàng" để gom nhóm (VD: Vietcombank).</li>
+          <li><strong>Thẻ tín dụng</strong> — chọn loại "Thẻ tín dụng", nhập hạn mức &amp; ngày sao kê. Quẹt thẻ ghi <em>Chi tiêu</em> từ ví thẻ → số dư âm = đang nợ. Trả nợ ghi <em>Chuyển tiền</em> từ ví ngân hàng → ví thẻ.</li>
+          <li><strong>Lãi tiền gửi / tiết kiệm</strong> (nhận về) — ghi <em>Thu nhập</em> vào đúng ví, danh mục "Lãi đầu tư / Tiết kiệm".</li>
+          <li><strong>Lãi / phí thẻ tín dụng</strong> (phải trả) — ghi <em>Chi tiêu</em> từ ví thẻ, danh mục "Trả góp / Trả nợ", loại "Tiêu sản/Nợ".</li>
+          <li><strong>Cân đối tài sản → "Đồng bộ số dư ví"</strong> tự đưa số dư dương vào Tài sản và dư nợ thẻ vào Tiêu sản/Nợ.</li>
+        </ol>
       </div>
     </section>
   </main>
